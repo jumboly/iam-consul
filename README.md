@@ -3,6 +3,8 @@
 キーボードを叩くだけで、超絶有能な IT コンサルタントの気分を味わえるブラウザアプリ。
 どのキーを叩いても、それらしいスライドが 1 枚ずつ組み上がり、提案書が完成していきます。中身はなくても、体裁は完璧です。
 
+**遊ぶ**: https://www.jumboly.jp/iam-consul/
+
 姉妹作: [FLOWSTATE IDE](https://www.jumboly.jp/best-programmer/)（凄腕プログラマー版）
 
 ## ビルド
