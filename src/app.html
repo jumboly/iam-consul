@@ -1,0 +1,1575 @@
+<title>I AM CONSUL</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Noto+Sans+JP:wght@400;500;700;900&family=Yomogi&display=swap">
+<style>
+/* Layout: one slide-editor window — thumbnails | slide stage over speaker notes | billing report; HUD overlays float above */
+:root {
+  /* 会議室のプロジェクターに映る「白いパワポ」の世界観なので、意図的にライト単一テーマにする */
+  color-scheme: light;
+  --bg: #e4e8ef;
+  --win: #f6f7f9;
+  --panel: #ffffff;
+  --line: #d5dbe5;
+  --fg: #1b2333;
+  --dim: #6b7487;
+  --navy: #142f5c;
+  --navy2: #2a5aa0;
+  --teal: #0e8a8c;
+  --gold: #c8962a;
+  --red: #d33f3f;
+  --green: #2e9b5a;
+  --sky: #3e7fd8;
+  --f-ui: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  --f-hud: "Barlow Condensed", "Noto Sans JP", system-ui, sans-serif;
+  --f-pen: "Yomogi", "Noto Sans JP", cursive;
+}
+* { box-sizing: border-box; }
+/* .intro などが display を指定しているため、hidden 属性を確実に優先させる */
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-ui); overflow: hidden; }
+
+.app {
+  height: 100%;
+  padding-block: 12px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+}
+.win {
+  min-height: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto;
+  background: var(--win); border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+  box-shadow: 0 10px 40px -20px rgba(20, 47, 92, .35);
+  transition: box-shadow .4s, border-color .4s;
+}
+body.flow .win { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 0 60px -10px var(--gold); }
+body.legend .win { border-color: var(--red); box-shadow: 0 0 0 1px var(--red), 0 0 90px -10px var(--red); }
+
+/* ---------- title bar & ribbon ---------- */
+.top {
+  display: flex; align-items: center; gap: 14px; padding: 7px 14px; min-width: 0;
+  background: var(--navy); color: #fff; font-size: 12.5px;
+}
+.lights { display: flex; gap: 6px; flex: none; }
+.lights i { width: 11px; height: 11px; border-radius: 50%; background: #ffffff33; }
+.lights i:nth-child(1) { background: #ff6159; }
+.lights i:nth-child(2) { background: #ffbd2e; }
+.lights i:nth-child(3) { background: #28c941; }
+.top .name { font-family: var(--f-hud); font-weight: 700; font-size: 16px; letter-spacing: .08em; flex: none; }
+.top .fname { color: #c9d4ea; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+.chip { display: flex; align-items: center; gap: 6px; flex: none; color: #c9d4ea; font-variant-numeric: tabular-nums; }
+.chip b { color: #fff; font-weight: 500; }
+.top select { font: 500 12px var(--f-ui); color: #fff; background: #ffffff1a; border: 1px solid #ffffff40; border-radius: 5px; padding: 3px 6px; cursor: pointer; }
+.top select option { color: var(--fg); }
+.top select:focus-visible { outline: 1px solid var(--gold); }
+.meter { width: 110px; height: 6px; background: #ffffff26; border-radius: 3px; overflow: hidden; }
+.meter i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--sky), var(--gold), var(--red)); transition: width .15s; }
+.inbox b { color: #fff; background: var(--red); border-radius: 9px; padding: 0 6px; font-size: 11px; }
+.ribbon { display: flex; gap: 2px; padding: 0 10px; background: var(--panel); border-bottom: 1px solid var(--line); font-size: 12.5px; overflow: hidden; }
+.ribbon span { padding: 7px 11px; color: var(--dim); white-space: nowrap; }
+.ribbon span.on { color: var(--navy); box-shadow: inset 0 -2px 0 var(--navy); font-weight: 700; }
+.ribbon span.bill { color: var(--gold); font-weight: 700; margin-left: auto; }
+
+/* ---------- main grid ---------- */
+.main { min-height: 0; display: grid; grid-template-columns: 196px minmax(0, 1fr) 236px; }
+.side, .tele { min-height: 0; overflow: hidden; background: var(--panel); font-size: 12.5px; }
+.side { border-right: 1px solid var(--line); padding: 12px 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
+.tele { border-left: 1px solid var(--line); padding: 12px 14px; display: flex; flex-direction: column; gap: 14px; }
+.label { font-family: var(--f-hud); font-size: 12px; font-weight: 700; letter-spacing: .14em; color: var(--dim); text-transform: uppercase; }
+.side .label { padding: 0 14px 4px; display: flex; justify-content: space-between; gap: 8px; }
+.side .label b { color: var(--fg); font-weight: 500; }
+.progress { margin: 4px 14px 10px; height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.progress i { display: block; height: 100%; width: 0; background: var(--teal); transition: width .3s; }
+.thumbs { overflow-y: auto; scrollbar-width: thin; padding: 0 14px 12px; display: grid; gap: 10px; align-content: start; }
+.thumb { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 6px; align-items: start; font-size: 11px; color: var(--dim); }
+.thumb .tw { width: 100%; aspect-ratio: 16 / 9; position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 3px; background: #fff; }
+.thumb .tw .slide { position: absolute; left: 0; top: 0; transform-origin: 0 0; transform: scale(var(--ts, .16)); box-shadow: none; }
+.thumb.now .tw { border: 2px solid var(--gold); display: grid; place-items: center; color: var(--gold); font-size: 11px; }
+.thumb.born .tw { animation: born 1.2s ease-out; }
+@keyframes born { from { box-shadow: 0 0 0 4px rgba(46, 155, 90, .45); } to { box-shadow: 0 0 0 0 transparent; } }
+
+.center { min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr) minmax(96px, 24%); position: relative; }
+.stage { position: relative; min-height: 0; overflow: hidden; background: #dfe4ec; cursor: text; --s: .5; }
+.stage .sw { position: absolute; left: 50%; top: 50%; width: 960px; height: 540px; transform: translate(-50%, -50%) scale(var(--s)); }
+.stage .sw.enter { animation: enter .35s cubic-bezier(.2, .9, .2, 1); }
+@keyframes enter { from { opacity: 0; translate: 60px 0; } }
+.stage .sw.leave .slide { animation: leave .38s ease-in forwards; }
+@keyframes leave { 40% { box-shadow: 0 0 0 6px rgba(46, 155, 90, .5), 0 20px 50px -20px rgba(20, 47, 92, .5); } to { opacity: .0; translate: -40px 0; } }
+
+/* ---------- speaker notes (log) ---------- */
+.notes { min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); border-top: 1px solid var(--line); background: var(--panel); }
+.notes .tabs { display: flex; gap: 18px; padding: 6px 14px; font-size: 11.5px; color: var(--dim); }
+.notes .tabs b { color: var(--navy); font-weight: 700; border-bottom: 2px solid var(--navy); }
+.nout { overflow: hidden; padding: 2px 14px 10px; font-size: 12.5px; line-height: 1.6; display: flex; flex-direction: column; justify-content: flex-end; }
+.nl { white-space: pre-wrap; overflow-wrap: anywhere; }
+.nl.cmd { color: var(--fg); }
+.nl.cmd::before { content: "▸ "; color: var(--navy2); }
+.nl.ok { color: var(--green); }
+.nl.warn { color: #b7791f; }
+.nl.err { color: var(--red); }
+.nl.hi { color: var(--navy2); }
+.nl.dim { color: var(--dim); }
+.nl.note { color: var(--fg); background: #fff8e6; border-left: 3px solid var(--gold); padding: 1px 8px; margin: 2px 0; }
+
+/* ---------- billing report ---------- */
+.stats { display: grid; gap: 7px; }
+.stat { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.stat span { color: var(--dim); }
+.stat b { font-family: var(--f-hud); font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat b.big { font-size: 26px; color: var(--gold); }
+.stat b.zero { color: var(--red); }
+.stat small { display: block; font-size: 10.5px; color: var(--dim); text-align: right; }
+#spark { width: 100%; height: 54px; display: block; }
+.rank { font-size: 17px; font-weight: 900; color: var(--navy); line-height: 1.3; }
+.rank small { display: block; font-size: 11.5px; font-weight: 400; color: var(--dim); margin-top: 2px; }
+.room { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px 4px; --amp: 0px; }
+.room i { position: relative; display: block; height: 22px; }
+.room i::before { content: ""; position: absolute; left: 50%; top: 0; width: 11px; height: 11px; margin-left: -5.5px; border-radius: 50%; background: var(--navy2); animation: nod .5s ease-in-out infinite alternate; animation-delay: var(--d, 0s); }
+.room i::after { content: ""; position: absolute; left: 50%; bottom: 0; width: 20px; height: 9px; margin-left: -10px; border-radius: 10px 10px 2px 2px; background: #c7d2e4; }
+.room i.zzz::before { background: var(--dim); animation: none; translate: 2px 2px; }
+.room i.zzz span { position: absolute; right: -2px; top: -6px; font-size: 9px; color: var(--dim); }
+@keyframes nod { to { translate: 0 var(--amp); } }
+
+/* ---------- status bar ---------- */
+.bar { display: flex; align-items: center; gap: 4px; padding: 5px 8px; background: var(--panel); border-top: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.bar::-webkit-scrollbar { display: none; }
+.bar button { all: unset; cursor: pointer; flex: none; display: flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: 5px; font-size: 12.5px; color: var(--fg); white-space: nowrap; }
+.bar button:hover { background: var(--bg); }
+.bar button:focus-visible { outline: 1px solid var(--navy2); }
+.bar button[aria-busy="true"], .bar button[aria-pressed="true"] { color: var(--gold); font-weight: 700; }
+.bar kbd { font-family: var(--f-hud); font-size: 11px; padding: 0 5px; border: 1px solid var(--line); border-radius: 3px; color: var(--dim); }
+.bar .pos { margin-left: auto; padding: 0 8px; font-size: 11.5px; color: var(--dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* ---------- slide (960×540 の論理座標で組み、表示時に拡大縮小する) ---------- */
+.slide {
+  position: relative; width: 960px; height: 540px; overflow: hidden; background: #fff; color: #1b2333;
+  font-family: var(--f-ui); box-shadow: 0 20px 50px -20px rgba(20, 47, 92, .5); line-height: 1.5;
+}
+.slide.dark { background: var(--navy); color: #fff; }
+.slide .tx { white-space: pre-wrap; }
+.slide .typing::after { content: ""; display: inline-block; width: 2px; height: 1em; margin-left: 1px; vertical-align: -.12em; background: var(--red); animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.sh { --p: 0; }
+.sh[data-anim="pop"] { opacity: var(--p); transform: scale(calc(.85 + .15 * var(--p))); }
+.sh[data-anim="grow-x"] { transform: scaleX(var(--p)); transform-origin: left center; }
+.sh[data-anim="grow-c"] { transform: scaleX(var(--p)); transform-origin: center; }
+.sh[data-anim="grow-y"] { transform: scaleY(var(--p)); transform-origin: center bottom; }
+.sh[data-anim="grow-d"] { transform: scaleY(var(--p)); transform-origin: center top; }
+.sh[data-anim="draw"] path { stroke-dasharray: 1; stroke-dashoffset: calc(1 - var(--p)); }
+.sh[data-anim="stamp"] { opacity: var(--p); transform: rotate(-8deg) scale(calc(2 - var(--p))); }
+/* F2「体裁を整える」で一度散らかしてから戻す。表示用の transform と競合しないよう translate / rotate を個別に使う */
+.slide.snap .sh, .slide.snap .s-head { transition: translate .5s cubic-bezier(.2, 1.4, .3, 1), rotate .5s cubic-bezier(.2, 1.4, .3, 1); }
+
+.s-head { position: absolute; left: 44px; right: 44px; top: 28px; min-height: 64px; font-size: 22px; font-weight: 700; color: var(--navy); line-height: 1.45; text-wrap: pretty; }
+.s-rule { position: absolute; left: 44px; right: 44px; top: 98px; height: 2px; background: linear-gradient(90deg, var(--gold) 0 120px, var(--navy) 120px); }
+.s-body { position: absolute; left: 44px; right: 44px; top: 116px; bottom: 46px; }
+.s-foot { position: absolute; left: 44px; right: 44px; bottom: 14px; display: flex; justify-content: space-between; gap: 20px; font-size: 10px; color: #8a93a6; }
+.s-mark { letter-spacing: .06em; flex: none; }
+.slide.dark .s-foot { color: #9fb0d0; }
+
+/* cover */
+.cv-band { position: absolute; left: 0; top: 0; bottom: 0; width: 30px; background: var(--navy); }
+.cv-band::after { content: ""; position: absolute; right: -8px; top: 0; bottom: 0; width: 4px; background: var(--gold); }
+.cv-main { position: absolute; left: 92px; right: 92px; top: 150px; display: grid; gap: 12px; }
+.cv-client { font-size: 17px; color: var(--dim); }
+.cv-title { font-size: 42px; font-weight: 900; color: var(--navy); line-height: 1.25; min-height: 52px; }
+.cv-rule { width: 170px; height: 3px; background: var(--gold); }
+.cv-sub { font-size: 18px; color: var(--fg); min-height: 27px; }
+.cv-date { font-size: 13px; color: var(--dim); margin-top: 24px; }
+.cv-stamp { position: absolute; right: 64px; top: 46px; padding: 6px 14px; border: 2.5px solid var(--red); border-radius: 4px; color: var(--red); font-weight: 700; font-size: 15px; min-width: 150px; min-height: 37px; text-align: center; }
+.cv-firm { position: absolute; left: 92px; bottom: 36px; font-family: var(--f-hud); font-weight: 700; letter-spacing: .2em; color: var(--navy); font-size: 15px; }
+
+/* executive summary */
+.ex { display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)) auto; }
+.ex-row { display: grid; grid-template-columns: 52px 150px minmax(0, 1fr); align-items: center; border-bottom: 1px solid var(--line); }
+.ex-num { width: 38px; height: 38px; border-radius: 50%; background: var(--navy); color: #fff; display: grid; place-items: center; font-family: var(--f-hud); font-size: 20px; font-weight: 700; }
+.ex-h { font-size: 17px; font-weight: 700; color: var(--navy); }
+.ex-b { font-size: 15.5px; }
+.ex-notes { font-size: 9.5px; color: #8a93a6; padding-top: 8px; line-height: 1.5; min-height: 30px; }
+
+/* as-is / to-be */
+.as { display: grid; grid-template-columns: minmax(0, 1fr) 84px minmax(0, 1fr); align-items: stretch; }
+.as-col { border-radius: 6px; padding: 14px 18px; }
+.as-l { background: #f1f2f5; border: 1px solid #d9dce3; color: #59617a; }
+.as-r { background: #eaf3fb; border: 1.5px solid var(--navy2); color: var(--navy); }
+.as-tag { font-family: var(--f-hud); font-weight: 700; font-size: 22px; letter-spacing: .06em; margin-bottom: 8px; min-height: 30px; }
+.as ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.as li { font-size: 15.5px; min-height: 24px; }
+.as-l .bul:not(:empty)::before { content: "× "; color: var(--red); font-weight: 700; }
+.as-r .bul:not(:empty)::before { content: "◎ "; color: var(--teal); font-weight: 700; }
+.as-arrow { align-self: center; justify-self: center; width: 60px; height: 86px; background: var(--gold); clip-path: polygon(0 18%, 55% 18%, 55% 0, 100% 50%, 55% 100%, 55% 82%, 0 82%); }
+
+/* matrix */
+.mx-q { position: absolute; width: 320px; height: 160px; padding: 8px 12px; font-size: 13px; font-weight: 700; color: #7c869b; }
+.mx-q.q0 { left: 110px; top: 6px; background: #eef2f8; }
+.mx-q.q1 { left: 430px; top: 6px; background: #e1f1ef; color: var(--teal); }
+.mx-q.q2 { left: 110px; top: 166px; background: #f5f6f8; }
+.mx-q.q3 { left: 430px; top: 166px; background: #eef2f8; text-align: right; }
+.mx-ax { position: absolute; left: 110px; top: 326px; width: 650px; height: 2px; background: var(--navy); }
+.mx-ax::after { content: ""; position: absolute; right: -2px; top: -5px; border: 6px solid transparent; border-left: 10px solid var(--navy); border-right: 0; }
+.mx-ay { position: absolute; left: 110px; top: -6px; width: 2px; height: 334px; background: var(--navy); }
+.mx-ay::after { content: ""; position: absolute; left: -5px; top: -2px; border: 6px solid transparent; border-bottom: 10px solid var(--navy); border-top: 0; }
+.mx-lx { position: absolute; top: 334px; font-size: 13px; color: var(--navy); font-weight: 700; }
+.mx-ly { position: absolute; left: 0; width: 100px; font-size: 13px; color: var(--navy); font-weight: 700; text-align: right; }
+.mx-dot { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--navy2); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--navy2); }
+.mx-dl { position: absolute; font-size: 12.5px; white-space: nowrap; transform: translate(12px, -50%); }
+.mx-us { position: absolute; width: 34px; height: 34px; margin: -17px 0 0 -17px; color: var(--gold); font-size: 34px; line-height: 34px; text-align: center; text-shadow: 0 2px 8px rgba(200, 150, 42, .5); }
+.mx-ul { position: absolute; font-size: 14px; font-weight: 900; color: #9a6f12; white-space: nowrap; transform: translate(-100%, -50%) translateX(-22px); }
+
+/* logic tree */
+.tr-box { position: absolute; display: grid; place-items: center; text-align: center; padding: 4px 10px; border-radius: 4px; font-size: 14px; line-height: 1.35; }
+.tr-box.root { background: var(--navy); color: #fff; font-weight: 700; font-size: 16px; }
+.tr-box.br { background: #eaf1fa; border: 1.5px solid var(--navy2); color: var(--navy); font-weight: 700; }
+.tr-box.lf { background: #fff; border: 1px solid #c6cfdd; justify-items: start; text-align: left; }
+.tr-svg { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.tr-svg path { fill: none; stroke: #9aa8c0; stroke-width: 1.5; }
+
+/* gantt */
+.gt { display: grid; grid-auto-rows: 40px; align-items: center; position: relative; }
+.gt-hd { font-size: 12.5px; color: var(--dim); text-align: center; border-left: 1px dashed #cdd4e0; height: 100%; display: grid; place-items: center; font-weight: 700; }
+.gt-lb { font-size: 14px; padding-right: 10px; }
+.gt-line { grid-column: 1 / -1; height: 1px; background: #e3e7ee; align-self: end; }
+.gt-bar { height: 22px; border-radius: 11px; background: linear-gradient(90deg, var(--navy2), var(--navy)); margin: 0 4px; }
+.gt-bar.pmo { background: repeating-linear-gradient(45deg, #c9d2e2 0 8px, #e1e6ef 8px 16px); }
+
+/* chart */
+.ch-unit { position: absolute; left: 0; top: 0; font-size: 12px; color: var(--dim); }
+.ch-base { position: absolute; left: 40px; right: 40px; top: 300px; height: 2px; background: var(--navy); }
+.ch-bar { position: absolute; width: 84px; background: var(--navy2); border-radius: 3px 3px 0 0; }
+.ch-bar.hot { background: linear-gradient(180deg, #e2b24a, var(--gold)); }
+.ch-v { position: absolute; width: 140px; margin-left: -28px; text-align: center; font-size: 15px; font-weight: 700; color: var(--navy); }
+.ch-x { position: absolute; top: 308px; width: 140px; margin-left: -28px; text-align: center; font-size: 13px; color: var(--dim); }
+.ch-svg { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.ch-svg path { fill: none; stroke: var(--red); stroke-width: 3; stroke-linecap: round; }
+.ch-tag { position: absolute; padding: 3px 10px; border-radius: 12px; background: var(--red); color: #fff; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.ch-note { position: absolute; left: 0; right: 0; top: 344px; font-size: 11px; color: #8a93a6; }
+
+/* org */
+.og { display: flex; flex-direction: column; justify-content: center; height: 100%; }
+.og-lv { display: flex; gap: 14px; justify-content: center; }
+.og-box { padding: 6px 18px; border: 1.5px solid var(--navy2); background: #f1f5fb; color: var(--navy); border-radius: 4px; font-size: 14.5px; min-height: 36px; min-width: 130px; text-align: center; }
+.og-lv:first-child .og-box { background: var(--navy); color: #fff; border-color: var(--navy); font-weight: 700; }
+.og-lv:last-child .og-box { border-style: dashed; background: #fff; color: var(--dim); }
+.og-link { width: 2px; height: 16px; margin: 0 auto; background: var(--navy2); }
+
+/* cost */
+.ct-row { display: flex; justify-content: space-between; gap: 20px; align-items: center; min-height: 46px; padding: 0 12px; border-bottom: 1px solid var(--line); font-size: 15.5px; }
+.ct-row .a { font-weight: 700; color: var(--navy); }
+.ct-row.total { margin-top: 10px; background: var(--navy); color: #fff; border: 0; border-radius: 4px; font-size: 19px; font-weight: 700; }
+.ct-row.total .a { color: #f3d48b; }
+.ct-note { font-size: 11px; color: #8a93a6; margin-top: 10px; display: block; }
+
+/* next steps */
+.st-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) 170px 120px; align-items: center; min-height: 52px; border-bottom: 1px solid var(--line); font-size: 15.5px; }
+.st-row.hd { min-height: 30px; font-size: 12px; color: var(--dim); font-weight: 700; border-bottom: 2px solid var(--navy); }
+.st-box { width: 18px; height: 18px; border: 2px solid var(--navy2); border-radius: 3px; }
+.st-row .w { color: var(--navy); font-weight: 700; }
+
+/* grid (SWOT / 3C / 比較) */
+.gd { display: grid; gap: 14px; height: 100%; }
+.gd-cell { border: 1px solid #cdd5e2; border-radius: 6px; overflow: hidden; background: #fbfcfe; }
+.gd-h { background: var(--navy); color: #fff; font-weight: 700; font-size: 15px; padding: 7px 14px; min-height: 37px; }
+.gd ul { margin: 0; padding: 10px 16px; list-style: none; display: grid; gap: 6px; }
+.gd li { font-size: 14.5px; min-height: 22px; }
+.gd .bul:not(:empty)::before { content: "・"; color: var(--navy2); }
+
+/* pyramid */
+.py-l { position: absolute; }
+.py-t { position: absolute; display: grid; place-items: center; text-align: center; color: #fff; font-size: 14.5px; font-weight: 700; line-height: 1.3; pointer-events: none; }
+
+/* message */
+.ms { position: absolute; inset: 60px 90px 60px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 26px; text-align: center; }
+.ms-rule { width: 140px; height: 3px; background: var(--gold); }
+.ms-big { font-size: 31px; font-weight: 900; color: var(--navy); line-height: 1.55; text-wrap: balance; min-height: 48px; }
+.ms-sub { font-size: 12.5px; color: var(--dim); min-height: 19px; }
+
+/* appendix */
+.ap { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 18px; }
+.ap-big { font-family: var(--f-hud); font-size: 76px; font-weight: 700; letter-spacing: .1em; min-height: 92px; }
+.ap-rule { width: 180px; height: 3px; background: var(--gold); }
+.ap-sub { font-size: 18px; color: #dbe4f5; min-height: 27px; }
+.ap-sub2 { font-size: 12.5px; color: #9fb0d0; min-height: 19px; }
+
+/* F1: red pen review */
+.pen { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+.pen.out { animation: fade .5s forwards; }
+.pen-o { position: absolute; border: 3px solid var(--red); border-radius: 50%; opacity: 0; animation: penIn .25s ease-out forwards; rotate: -4deg; }
+.pen-c { position: absolute; font-family: var(--f-pen); font-size: 24px; color: var(--red); white-space: nowrap; opacity: 0; animation: penIn .25s ease-out forwards; }
+@keyframes penIn { from { opacity: 0; scale: 1.3; } to { opacity: .92; scale: 1; } }
+/* F2: alignment guides */
+.guides { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+.guides i { position: absolute; background: #ff3fa4; opacity: .8; }
+.guides.out { animation: fade .5s forwards; }
+
+/* deck complete: hanko */
+.hanko {
+  position: absolute; right: 9%; top: 18%; z-index: 6; width: 190px; height: 190px; border-radius: 50%;
+  border: 9px solid var(--red); box-shadow: inset 0 0 0 5px #fff, inset 0 0 0 9px var(--red);
+  display: grid; place-items: center; color: var(--red); font-size: 58px; font-weight: 900; letter-spacing: .04em;
+  background: rgba(255, 255, 255, .55); pointer-events: none; animation: hanko .45s cubic-bezier(.2, 1.6, .4, 1) forwards;
+}
+@keyframes hanko { from { opacity: 0; transform: scale(2.6) rotate(-30deg); } to { opacity: .92; transform: scale(1) rotate(-12deg); } }
+
+/* ---------- HUD overlays ---------- */
+#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 30; }
+.combo { position: absolute; top: 14px; right: 18px; z-index: 20; text-align: right; pointer-events: none; font-family: var(--f-hud); line-height: 1; opacity: 0; transition: opacity .3s; }
+.combo.show { opacity: 1; }
+.combo .num { font-size: 58px; font-weight: 700; color: var(--navy); text-shadow: 0 0 16px rgba(200, 150, 42, .6), 0 2px 0 #fff; font-variant-numeric: tabular-nums; }
+.combo .num.pop { animation: pop .12s ease-out; }
+.combo .tier { font-size: 16px; font-weight: 700; letter-spacing: .28em; color: var(--gold); margin-top: 2px; text-shadow: 0 1px 0 #fff; }
+@keyframes pop { from { transform: scale(1.25); } to { transform: scale(1); } }
+
+.mission {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 22;
+  width: min(440px, calc(100% - 32px)); padding: 12px 14px; border: 1px solid var(--red); border-radius: 8px;
+  background: rgba(255, 255, 255, .96); box-shadow: 0 10px 40px -10px rgba(211, 63, 63, .6);
+}
+.mission .head { display: flex; justify-content: space-between; gap: 10px; font-family: var(--f-hud); font-weight: 700; letter-spacing: .1em; font-size: 14px; color: var(--red); }
+.mission .title { font-weight: 700; font-size: 15px; margin: 4px 0 8px; }
+.mission .prog { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+.mission .prog i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--red), var(--gold), var(--green)); transition: width .1s; }
+.mission .hint { font-size: 11.5px; color: var(--dim); margin-top: 6px; }
+
+.banner { position: fixed; left: 50%; top: 42%; z-index: 40; transform: translate(-50%, -50%); text-align: center; pointer-events: none; opacity: 0; width: min(92vw, 900px); }
+.banner.show { animation: bannerIn 2.6s cubic-bezier(.2, .9, .2, 1) forwards; }
+.banner h2 { margin: 0; font-family: var(--f-hud); font-weight: 700; font-size: clamp(38px, 8vw, 96px); letter-spacing: .05em; line-height: 1; text-wrap: balance; color: var(--navy); text-shadow: 0 0 1px #fff, 0 4px 30px rgba(255, 255, 255, .9); }
+.banner p { display: inline-block; margin: 14px 0 0; padding: 6px 14px; border-radius: 6px; font-size: clamp(13px, 1.8vw, 17px); font-weight: 700; color: var(--fg); background: rgba(255, 255, 255, .9); box-shadow: 0 6px 24px -10px rgba(20, 47, 92, .5); }
+.banner.ok h2 { color: var(--green); }
+.banner.won h2 { color: var(--red); }
+.banner.flow h2 { color: var(--gold); }
+.banner.warn h2 { color: #b7791f; }
+@keyframes bannerIn {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(1.4); filter: blur(8px); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(1); filter: blur(0); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -54%); }
+}
+.flash { position: fixed; inset: 0; z-index: 35; pointer-events: none; opacity: 0; }
+.flash.go { animation: flash .5s ease-out; }
+@keyframes flash { from { opacity: .3; } to { opacity: 0; } }
+
+/* ---------- mail notifications ---------- */
+.mails {
+  position: fixed; z-index: 45; display: grid; gap: 8px; width: min(340px, calc(100vw - 32px));
+  right: calc(max(16px, env(safe-area-inset-right, 0px)) + 14px); bottom: calc(env(safe-area-inset-bottom, 0px) + 60px);
+}
+.mail {
+  background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--navy2); border-radius: 6px;
+  padding: 9px 12px 10px; font-size: 12.5px; box-shadow: 0 14px 34px -12px rgba(20, 47, 92, .45); animation: slide .3s ease-out;
+}
+.mail.urgent { border-left-color: var(--red); }
+.mail .m-top { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--dim); }
+.mail .m-top b { color: var(--navy2); font-weight: 700; }
+.mail.urgent .m-top b { color: var(--red); }
+.mail .m-from { margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mail .m-from b { font-size: 13.5px; }
+.mail .m-from span { color: var(--dim); font-size: 11px; margin-left: 4px; }
+.mail .m-subj { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mail .m-cc { font-size: 11px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mail .m-body { margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--line); line-height: 1.55; }
+.mail .m-flag { color: var(--red); font-weight: 700; margin-right: 4px; }
+.mail.out { animation: fade .4s forwards; }
+@keyframes slide { from { opacity: 0; transform: translateX(30px); } }
+@keyframes fade { to { opacity: 0; transform: translateX(30px); } }
+
+/* ---------- slideshow (F3) ---------- */
+.slideshow { position: fixed; inset: 0; z-index: 70; background: #05070d; display: grid; place-items: center; cursor: pointer; }
+.slideshow .sw { position: absolute; left: 50%; top: 50%; width: 960px; height: 540px; transform: translate(-50%, -50%) scale(var(--s, 1)); }
+.slideshow .slide { box-shadow: none; }
+.slideshow .slide.in { animation: enter .3s ease-out; }
+.slideshow .cap { position: absolute; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); left: 0; right: 0; text-align: center; color: #8790a8; font-size: 12px; }
+
+/* ---------- intro ---------- */
+.intro {
+  position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; overflow-y: auto;
+  background: rgba(228, 232, 239, .88); backdrop-filter: blur(4px); padding-block: 24px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.intro .card { max-width: 720px; display: grid; gap: 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 28px 30px; box-shadow: 0 30px 80px -30px rgba(20, 47, 92, .5); }
+.intro .eyebrow { font-family: var(--f-hud); font-weight: 700; letter-spacing: .3em; font-size: 13px; color: var(--gold); }
+.intro h1 { margin: 0; font-family: var(--f-hud); font-weight: 700; font-size: clamp(44px, 10vw, 84px); line-height: .92; letter-spacing: .03em; color: var(--navy); }
+.intro h1 em { font-style: normal; color: var(--gold); }
+.intro p { margin: 0; line-height: 1.8; font-size: 15px; max-width: 60ch; }
+.intro ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; font-size: 13.5px; }
+.intro li { display: flex; gap: 10px; align-items: baseline; }
+.intro li kbd { flex: none; min-width: 78px; font-family: var(--f-hud); font-weight: 700; font-size: 13px; color: var(--navy2); }
+.picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+.picker button { all: unset; box-sizing: border-box; cursor: pointer; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--win); display: grid; gap: 2px; }
+.picker button b { font-size: 14px; font-weight: 700; color: var(--navy); }
+.picker button span { font-size: 11px; color: var(--dim); }
+.picker button:hover, .picker button[aria-pressed="true"] { border-color: var(--gold); background: #fff8e6; }
+.picker button:focus-visible { outline: 1px solid var(--navy2); }
+.intro .foot { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: baseline; justify-content: space-between; }
+.intro .go { font-family: var(--f-hud); font-weight: 700; letter-spacing: .3em; color: var(--green); animation: blink 1.2s steps(1) infinite; }
+.intro .fine { font-size: 11.5px; color: var(--dim); }
+
+.sink { position: fixed; left: 0; bottom: 0; width: 1px; height: 1px; opacity: 0; font-size: 16px; border: 0; padding: 0; resize: none; }
+
+@media (max-width: 860px) {
+  /* リボンを隠すと行が 1 つ減るので、行定義もそれに合わせる */
+  .win { grid-template-rows: auto minmax(0, 1fr) auto; }
+  .main { grid-template-columns: minmax(0, 1fr); }
+  .side, .tele, .ribbon { display: none; }
+  .top { gap: 10px; }
+  .top .name { white-space: nowrap; }
+  .top select { max-width: 42vw; }
+  /* 狭い画面ではメールがスライドを覆ってしまうので、最新 2 通だけ・CC なしの簡易表示にする */
+  .mail .m-cc { display: none; }
+  .mails .mail:nth-last-child(n+3) { display: none; }
+  .top .fname, .top .clock, .top .meterchip { display: none; }
+  .top .name { flex: 1; }
+  .combo .num { font-size: 40px; }
+  .center { grid-template-rows: minmax(0, 1fr) minmax(80px, 26%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .banner.show { animation-duration: 2.6s; animation-timing-function: steps(1); }
+  .slide .typing::after, .intro .go, .room i::before { animation: none; }
+  .stage .sw.enter, .stage .sw.leave .slide, .slideshow .slide.in { animation: none; }
+}
+</style>
+
+<div class="app">
+  <div class="win" id="win">
+    <header class="top">
+      <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
+      <span class="name">I AM CONSUL</span>
+      <span class="fname" id="fname"></span>
+      <label class="chip">案件 <select id="deckSel" aria-label="案件を切り替える"></select></label>
+      <span class="chip inbox" title="受信トレイの未読">✉ <b id="inbox">0</b></span>
+      <span class="chip meterchip">BILLABLE <span class="meter"><i id="flowMeter"></i></span></span>
+      <span class="chip clock"><b id="clock">--:--:--</b></span>
+    </header>
+    <nav class="ribbon" aria-hidden="true">
+      <span>ファイル</span><span class="on">ホーム</span><span>挿入</span><span>デザイン</span><span>画面切り替え</span><span>アニメーション</span><span>スライドショー</span><span>校閲</span><span>表示</span><span class="bill">請求</span>
+    </nav>
+
+    <div class="main">
+      <nav class="side" aria-label="スライド一覧">
+        <div class="label"><span>Slides</span><b id="slideCount">0 / 0</b></div>
+        <div class="progress"><i id="deckProg"></i></div>
+        <div class="thumbs" id="thumbs"></div>
+      </nav>
+
+      <section class="center">
+        <div class="stage" id="stage"></div>
+        <div class="combo" id="combo" aria-hidden="true"><div class="num" id="comboNum">0</div><div class="tier" id="comboTier"></div></div>
+        <div class="mission" id="mission" hidden>
+          <div class="head"><span>⚠ 至急案件</span><span id="mTime">20.0s</span></div>
+          <div class="title" id="mTitle"></div>
+          <div class="prog"><i id="mProg"></i></div>
+          <div class="hint">キーボードを連打して対応せよ</div>
+        </div>
+        <div class="notes">
+          <div class="tabs"><b>発表者ノート</b><span>変更履歴</span><span>コメント 0</span></div>
+          <div class="nout" id="nout" aria-live="off"></div>
+        </div>
+      </section>
+
+      <aside class="tele" aria-label="稼働レポート">
+        <div class="label">稼働レポート</div>
+        <div class="rank" id="rank">アナリスト<small>議事録と図形の整列担当</small></div>
+        <div class="stats">
+          <div class="stat"><span>請求額</span><b class="big" id="sBill">¥0</b></div>
+          <div class="stat"><span>時間単価</span><b id="sRate">¥0</b></div>
+          <div class="stat"><span>請求稼働</span><div><b id="sHours">0.0h</b><small id="sReal">実時間 0:00</small></div></div>
+          <div class="stat"><span>作成スライド</span><b id="sSlides">0</b></div>
+          <div class="stat"><span>受注した案件</span><b id="sWon">0</b></div>
+          <div class="stat"><span>投入フレームワーク</span><b id="sFw">0</b></div>
+          <div class="stat"><span>横文字率</span><b id="sYoko">0%</b></div>
+          <div class="stat"><span>実装した行数</span><b class="zero">0</b></div>
+          <div class="stat"><span>最大コンボ</span><b id="sCombo">0</b></div>
+        </div>
+        <div>
+          <div class="label" style="margin-bottom:6px">請求額の推移</div>
+          <canvas id="spark"></canvas>
+        </div>
+        <div>
+          <div class="label" style="margin-bottom:8px">会議室の頷き</div>
+          <div class="room" id="room"></div>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="bar">
+      <button type="button" data-cmd="review"><kbd>F1</kbd>パートナーレビュー</button>
+      <button type="button" data-cmd="align"><kbd>F2</kbd>体裁を整える</button>
+      <button type="button" data-cmd="present"><kbd>F3</kbd>役員プレゼン</button>
+      <button type="button" data-cmd="framework"><kbd>F4</kbd>フレームワーク投入</button>
+      <button type="button" data-cmd="mission"><kbd>F5</kbd>緊急案件</button>
+      <button type="button" data-cmd="sound" id="soundBtn"><kbd>F6</kbd>サウンド OFF</button>
+      <button type="button" data-cmd="yoko" id="yokoBtn" aria-pressed="false"><kbd>F7</kbd>横文字モード</button>
+      <span class="pos" id="pos"></span>
+    </footer>
+  </div>
+</div>
+
+<canvas id="fx"></canvas>
+<div class="flash" id="flash"></div>
+<div class="banner" id="banner"><h2 id="bTitle"></h2><p id="bSub"></p></div>
+<div class="mails" id="mails" aria-live="polite"></div>
+<div class="slideshow" id="show" hidden><div class="sw" id="showSw"></div><div class="cap" id="showCap"></div></div>
+<textarea class="sink" id="sink" aria-label="キーボード入力" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+
+<div class="intro" id="intro">
+  <div class="card">
+    <div class="eyebrow">// BILLABLE FROM THE FIRST KEYSTROKE</div>
+    <h1>I AM<br><em>CONSUL</em></h1>
+    <p>キーボードを好きなように叩くだけ。それらしいスライドが指先から湧き出し、提案書が 1 枚ずつ組み上がっていきます。今日のあなたは伝説の IT コンサルタント。中身はなくても、体裁は完璧です。</p>
+    <div class="picker" id="picker" role="group" aria-label="提案する案件を選ぶ"></div>
+    <ul>
+      <li><kbd>ANY KEY</kbd>スライドを作る（速く叩くほどコンボと単価が上がる）</li>
+      <li><kbd>← →</kbd>案件を選ぶ（スタート前）</li>
+      <li><kbd>F1〜F3</kbd>パートナーレビュー / 体裁を整える / 役員プレゼン</li>
+      <li><kbd>F4 / F5</kbd>フレームワーク投入 / 緊急案件</li>
+      <li><kbd>F6 / F7</kbd>サウンド / 横文字モード</li>
+      <li><kbd>Alt + 1〜7</kbd>F キーが使いにくい時はこちら</li>
+    </ul>
+    <div class="foot">
+      <div class="go">PRESS ANY KEY / TAP TO START</div>
+      <div class="fine">登場する企業・人物・数字はすべて架空です</div>
+    </div>
+  </div>
+</div>
+
+<script id="content" type="application/json">__CONTENT__</script>
+<script>
+(() => {
+  "use strict";
+  const $ = (s) => document.querySelector(s);
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const rint = (a, b) => Math.floor(rnd(a, b + 1));
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const fmt = (n) => Math.floor(n).toLocaleString("ja-JP");
+
+  // ビルド時に tools/build.mjs が src/content.js を検証して埋め込む
+  const { DECKS, VOCAB, LINES, MISSIONS } = JSON.parse(document.getElementById("content").textContent);
+
+  // ---------------------------------------------------------------- placeholders
+  // 日本の会計年度に合わせ、1〜3 月は前年度として数える
+  const NOW = new Date();
+  const FY = NOW.getMonth() < 3 ? NOW.getFullYear() - 1 : NOW.getFullYear();
+  let ctx = { client: VOCAB.clients[0], vars: {} };
+  function resolve(str) {
+    return str.replace(/\{(\w+)(?::([^}]*))?\}/g, (m, key, arg) => {
+      switch (key) {
+        case "client": return ctx.client;
+        case "buzz": return pick(VOCAB.buzz);
+        case "n": {
+          const [range, name] = arg.split("#"), [a, b] = range.split("-").map(Number);
+          if (!name) return String(rint(a, b));
+          return (ctx.vars[name] ??= String(rint(a, b)));
+        }
+        case "pick": return pick(arg.split("|"));
+        case "fy": return "FY" + String((FY + Number(arg)) % 100).padStart(2, "0");
+        default: return m;
+      }
+    });
+  }
+  const deep = (v) => typeof v === "string" ? resolve(v) : Array.isArray(v) ? v.map(deep) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, deep(x)])) : v;
+
+  // F7 横文字モード。長い語を先に置換しないと「合意形成」が「アグリー形成」になってしまう
+  const YOKO = Object.entries(VOCAB.yoko).sort((a, b) => b[0].length - a[0].length);
+  const YOKO_RE = new RegExp(YOKO.map(([k]) => k).join("|"), "g");
+  const YOKO_MAP = Object.fromEntries(YOKO);
+  let yoko = false;
+  const view = (s) => (yoko ? s.replace(YOKO_RE, (w) => YOKO_MAP[w]) : s);
+
+  // 同じ文言が続くと演出が作り物っぽくなるので、一巡するまで重複させずに引く（山札方式）
+  function deck(items) {
+    let rest = [];
+    return () => {
+      if (!rest.length) {
+        rest = [...items];
+        for (let i = rest.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [rest[i], rest[j]] = [rest[j], rest[i]]; }
+      }
+      return rest.pop();
+    };
+  }
+  const draw = {
+    praise: deck(LINES.praise), ai: deck(LINES.ai), complete: deck(LINES.complete), aftermath: deck(LINES.aftermath),
+    present: deck(LINES.present), mission: deck(MISSIONS), thanks: deck(LINES.missionThanks), timeout: deck(LINES.missionTimeout),
+    note: deck(VOCAB.notes), source: deck(VOCAB.sources), subject: deck(VOCAB.mailSubjects), cc: deck(VOCAB.mailCc), axes: deck(VOCAB.axes),
+  };
+
+  // ---------------------------------------------------------------- slide templates
+  // テンプレートは「表示される順」に T()（文字）と S()（図形）を呼び、その登録順がそのまま打鍵で現れる順になる。
+  // S() は開きタグだけを返すので、中身を書いたあと呼び出し側で </div> を閉じる
+  function compose(spec, page) {
+    const items = [];
+    const T = (text, cls = "") => { items.push({ kind: "t", full: String(text) }); return `<span class="tx ${cls}" data-rv="${items.length - 1}"></span>`; };
+    const S = (cls, style = "", anim = "pop") => { items.push({ kind: "s" }); return `<div class="${cls} sh" data-anim="${anim}" style="${style}" data-rv="${items.length - 1}">`; };
+    const head = () => `<div class="s-head">${T(spec.head)}</div>${S("s-rule", "", "grow-x")}</div>`;
+    const foot = () => `<div class="s-foot"><span>${T(spec.src)}</span><span class="s-mark">I AM CONSUL ｜ Confidential ｜ ${page}</span></div>`;
+    let html = "", dark = false;
+    switch (spec.t) {
+      case "cover": {
+        const d = `${NOW.getFullYear()} 年 ${NOW.getMonth() + 1} 月 ${NOW.getDate()} 日`;
+        html = `${S("cv-band", "", "grow-y")}</div>
+          <div class="cv-main"><div class="cv-client">${T(ctx.client + " 御中")}</div><div class="cv-title">${T(spec.title)}</div>
+          ${S("cv-rule", "", "grow-x")}</div><div class="cv-sub">${T(spec.sub)}</div><div class="cv-date">${T(d)}</div></div>
+          ${S("cv-stamp", "", "stamp")}${T("ドラフト｜議論用")}</div><div class="cv-firm">I AM CONSUL CONSULTING</div>`;
+        break;
+      }
+      case "exec": {
+        // 結論は 3 つに絞ったのに、注釈は増え続ける
+        const notes = Array.from({ length: spec.notes || 8 }, (_, i) => `※${i + 1} ${VOCAB.footnotes[i % VOCAB.footnotes.length]}`).join("　");
+        html = head() + `<div class="s-body ex">${spec.points.map(([h, b], i) =>
+          `${S("ex-row", "", "grow-x")}${S("ex-num")}${i + 1}</div><div class="ex-h">${T(h)}</div><div class="ex-b">${T(b)}</div></div>`).join("")}
+          <div class="ex-notes">${T(notes)}</div></div>` + foot();
+        break;
+      }
+      case "asis": {
+        const col = (side, tag, list) => `${S("as-col " + side)}<div class="as-tag">${T(tag)}</div><ul>${list.map((x) => `<li>${T(x, "bul")}</li>`).join("")}</ul></div>`;
+        html = head() + `<div class="s-body as">${col("as-l", "As-Is", spec.asis)}${S("as-arrow", "", "grow-x")}</div>${col("as-r", "To-Be", spec.tobe)}</div>` + foot();
+        break;
+      }
+      case "matrix": {
+        // 象限の並びは [左上, 右上, 左下, 右下]。プロット領域は横 640 × 縦 320
+        const px = (x) => 110 + x * 640, py = (y) => 6 + (1 - y) * 320;
+        html = head() + `<div class="s-body">
+          ${spec.q.map((q, i) => `${S("mx-q q" + i)}${T(q)}</div>`).join("")}
+          ${S("mx-ay", "", "grow-y")}</div>${S("mx-ax", "", "grow-x")}</div>
+          <div class="mx-ly" style="top:296px">${T(spec.y[0])}</div><div class="mx-ly" style="top:4px">${T(spec.y[1])}</div>
+          <div class="mx-lx" style="left:110px">${T(spec.x[0])}</div><div class="mx-lx" style="left:722px">${T(spec.x[1])}</div>
+          ${spec.dots.map(([l, x, y]) => `${S("mx-dot", `left:${px(x)}px;top:${py(y)}px`)}</div><div class="mx-dl" style="left:${px(x)}px;top:${py(y)}px">${T(l)}</div>`).join("")}
+          ${spec.us ? `${S("mx-us", `left:${px(spec.us[1])}px;top:${py(spec.us[2])}px`)}★</div><div class="mx-ul" style="left:${px(spec.us[1])}px;top:${py(spec.us[2])}px">${T(spec.us[0])}</div>` : ""}
+          </div>` + foot();
+        break;
+      }
+      case "tree": {
+        // 葉の数で縦方向を等分し、枝と根はぶら下がる葉の中央に置く（ロジックツリーの定番レイアウト）
+        const H = 370, leaves = spec.branches.flatMap(([, ls]) => ls), slot = H / leaves.length, lh = Math.min(44, slot - 8);
+        let li = 0;
+        const brs = spec.branches.map(([label, ls]) => {
+          const ys = ls.map(() => (li++ + 0.5) * slot);
+          return { label, ls, ys, y: (ys[0] + ys[ys.length - 1]) / 2 };
+        });
+        const rootY = (brs[0].y + brs[brs.length - 1].y) / 2;
+        const svg = (d) => `${S("tr-svg", "", "draw")}<svg width="872" height="${H}" viewBox="0 0 872 ${H}">${d}</svg></div>`;
+        const elbow = (x1, y1, x2, y2) => { const mx = (x1 + x2) / 2; return `<path pathLength="1" d="M${x1} ${y1} H${mx} V${y2} H${x2}"/>`; };
+        html = head() + `<div class="s-body">${S("tr-box root", `left:0;top:${rootY - 34}px;width:180px;height:68px`)}${T(spec.root)}</div>
+          ${brs.map((b) => svg(elbow(180, rootY, 250, b.y)) + `${S("tr-box br", `left:250px;top:${b.y - 26}px;width:230px;height:52px`)}${T(b.label)}</div>`
+            + svg(b.ys.map((y) => elbow(480, b.y, 540, y)).join(""))
+            + b.ls.map((l, k) => `${S("tr-box lf", `left:540px;top:${b.ys[k] - lh / 2}px;width:332px;height:${lh}px`)}${T(l)}</div>`).join("")).join("")}
+          </div>` + foot();
+        break;
+      }
+      case "gantt": {
+        const n = spec.cols.length;
+        html = head() + `<div class="s-body"><div class="gt" style="grid-template-columns:260px repeat(${n}, minmax(0, 1fr))">
+          <div></div>${spec.cols.map((c) => `<div class="gt-hd">${T(c)}</div>`).join("")}
+          ${spec.rows.map(([label, start, len, cls], r) => `<div class="gt-line" style="grid-row:${r + 2}"></div>
+            <div class="gt-lb" style="grid-row:${r + 2};grid-column:1">${T(label)}</div>
+            ${S("gt-bar " + (cls || ""), `grid-row:${r + 2};grid-column:${start + 2} / span ${len}`, "grow-x")}</div>`).join("")}
+          </div></div>` + foot();
+        break;
+      }
+      case "chart": {
+        // 縦軸は「最後の棒が一番高く見える」ように最大値で正規化する。ホッケースティックを強調するためだけの軸
+        const vals = spec.bars.map(([, v]) => Number(v)), max = Math.max(...vals), n = vals.length;
+        const step = 752 / n, bx = (i) => 60 + i * step + (step - 84) / 2, bh = (v) => Math.max(3, (v / max) * 240), top = (i) => 300 - bh(vals[i]);
+        const c0 = bx(0) + 42, cl = bx(n - 1) + 42;
+        const curve = `M${c0} ${top(0) - 34} C ${c0 + step * 1.6} ${top(0) - 30}, ${cl - step * 0.9} ${top(0) - 30}, ${cl - 50} ${top(n - 1) - 30}`;
+        html = head() + `<div class="s-body"><div class="ch-unit">${T("（単位：" + spec.unit + "）")}</div>${S("ch-base", "", "grow-x")}</div>
+          ${spec.bars.map(([label], i) => `${S("ch-bar" + (i >= n - 2 && vals[i] === max ? " hot" : ""), `left:${bx(i)}px;top:${top(i)}px;height:${bh(vals[i])}px`, "grow-y")}</div>
+            <div class="ch-v" style="left:${bx(i)}px;top:${top(i) - 26}px">${T(vals[i].toLocaleString("ja-JP"))}</div><div class="ch-x" style="left:${bx(i)}px">${T(label)}</div>`).join("")}
+          ${S("ch-svg", "", "draw")}<svg width="872" height="378" viewBox="0 0 872 378"><path pathLength="1" d="${curve}"/></svg></div>
+          ${S("ch-tag", `left:${cl - 150}px;top:${Math.max(0, top(n - 1) - 74)}px`)}${T("急成長！")}</div>
+          ${spec.note ? `<div class="ch-note">${T(spec.note)}</div>` : ""}</div>` + foot();
+        break;
+      }
+      case "org":
+        html = head() + `<div class="s-body og">${spec.levels.map((lv, i) => (i ? `${S("og-link", "", "grow-d")}</div>` : "")
+          + `<div class="og-lv">${lv.map((b) => `${S("og-box")}${T(b)}</div>`).join("")}</div>`).join("")}</div>` + foot();
+        break;
+      case "cost":
+        html = head() + `<div class="s-body">${spec.rows.map(([i, a]) => `${S("ct-row", "", "grow-x")}<span>${T(i)}</span><span class="a">${T(a)}</span></div>`).join("")}
+          ${S("ct-row total", "", "grow-x")}<span>${T("合計")}</span><span class="a">${T(spec.total)}</span></div>
+          ${T("※ 消費税・交通費・会食費・追加のご要望への対応費は別途", "ct-note")}</div>` + foot();
+        break;
+      case "steps":
+        html = head() + `<div class="s-body"><div class="st-row hd"><span></span><span>アクション</span><span>担当</span><span>期限</span></div>
+          ${spec.items.map(([a, who, when]) => `${S("st-row", "", "grow-x")}<span class="st-box"></span><span>${T(a)}</span><span class="w">${T(who)}</span><span>${T(when)}</span></div>`).join("")}
+          </div>` + foot();
+        break;
+      case "grid": {
+        const cols = spec.cells.length === 4 ? 2 : spec.cells.length;
+        html = head() + `<div class="s-body gd" style="grid-template-columns:repeat(${cols}, minmax(0, 1fr))">${spec.cells.map(([h, list]) =>
+          `${S("gd-cell")}<div class="gd-h">${T(h)}</div><ul>${list.map((x) => `<li>${T(x, "bul")}</li>`).join("")}</ul></div>`).join("")}</div>` + foot();
+        break;
+      }
+      case "pyramid": {
+        // 土台から積み上げて見せたいので、下の段から順に登録する
+        const N = spec.layers.length, W = 700, H = 350, a = 0.32, lh = H / N;
+        const parts = spec.layers.map((label, i) => {
+          const tw = a + (1 - a) * (i / N), bw = a + (1 - a) * ((i + 1) / N);
+          const t = ((1 - tw) / 2) * 100, b = ((1 - bw) / 2) * 100;
+          const shade = ["#142f5c", "#1d3f75", "#27508d", "#3363a6", "#4176bd", "#5088cf"][Math.min(i, 5)];
+          const box = `left:${86}px;top:${10 + i * lh}px;width:${W}px;height:${lh - 4}px`;
+          return `${S("py-l", `${box};background:${shade};clip-path:polygon(${t}% 0, ${100 - t}% 0, ${100 - b}% 100%, ${b}% 100%)`, "grow-y")}</div><div class="py-t" style="${box}">${T(label)}</div>`;
+        });
+        html = head() + `<div class="s-body">${parts.reverse().join("")}</div>` + foot();
+        break;
+      }
+      case "message":
+        html = `<div class="ms">${S("ms-rule", "", "grow-c")}</div><div class="ms-big">${T(spec.big)}</div>${S("ms-rule", "", "grow-c")}</div><div class="ms-sub">${T(spec.sub || "")}</div></div>` + foot();
+        break;
+      case "appendix": {
+        dark = true;
+        const from = page + 1, to = from + rint(120, 200);
+        html = `<div class="ap"><div class="ap-big">${T("Appendix")}</div>${S("ap-rule", "", "grow-c")}</div>
+          <div class="ap-sub">${T(`参考資料 p.${from}〜p.${to}（本編の ${Math.round((to - from) / page)} 倍）`)}</div>
+          <div class="ap-sub2">${T(`※ 以降の ${to - from} 枚は印刷しないでください`)}</div></div>`;
+        break;
+      }
+    }
+    return { html, items, dark };
+  }
+
+  // F4 で割り込ませる 2×2。右上だけは必ず空けておき、そこに貴社を置く
+  function frameworkSlide() {
+    const [a, b] = draw.axes().map(resolve);
+    const names = ["現行施策", "他社事例", "前回の提案", "社長の案", "現場の案", "競合 A 社", "去年の資料"].sort(() => Math.random() - 0.5).slice(0, 4);
+    return {
+      t: "matrix", fw: true, head: `『${a}』×『${b}』で整理すると、貴社が目指すべきは右上である`,
+      x: [`${b}：低`, "高"], y: [`${a}：低`, "高"], q: ["要検討", "目指す姿", "見送り", "様子見"],
+      dots: names.map((l) => [l, rnd(0.08, 0.62), rnd(0.1, 0.62)]), us: ["貴社（To-Be）", 0.9, 0.9],
+    };
+  }
+
+  // ---------------------------------------------------------------- deck state
+  let deckSpec = null, deckDef = null;
+  let queue = [];          // まだ作り始めていないスライド
+  let cur = null;          // { spec, page, el, wrap, items, idx, finished }
+  let page = 0, version = 1;
+  let switching = false, switchTimer = 0;
+  let slidesMade = 0, decksWon = 0, frameworks = 0, revenue = 0;
+  const done = []; // このデッキで完成したスライド要素（サムネイルとスライドショー用）
+  const stage = $("#stage");
+  const FW_TYPES = new Set(["matrix", "tree", "grid", "pyramid"]);
+
+  function fileName() {
+    return `【ドラフト】${ctx.client}様_${deckDef.title.replace(/\s/g, "")}_v${version}_最終_最終(${Math.max(2, Math.floor(version / 9))}).pptx`;
+  }
+
+  function loadDeck(d, { quiet = false } = {}) {
+    deckDef = d;
+    ctx = { client: pick(VOCAB.clients), vars: {} };
+    deckSpec = deep(d);
+    queue = deckSpec.slides.map((s) => ({ ...s }));
+    page = 0;
+    version = rint(12, 48);
+    switching = false;
+    // 完成演出の途中で手動切替された場合に、予約済みの自動切替が後から割り込まないようにする
+    clearTimeout(switchTimer);
+    done.length = 0;
+    $("#thumbs").textContent = "";
+    $("#deckSel").value = d.id;
+    stage.querySelectorAll(".hanko").forEach((h) => h.remove());
+    if (!quiet) {
+      cmd(`新規プレゼンテーション: ${d.title}（${ctx.client} 御中）`);
+      log(`テンプレート「I AM CONSUL 標準_v214」を適用 · 16:9 · 日本語`, "dim");
+    }
+    nextSlide();
+  }
+
+  function nextSlide() {
+    const spec = queue.shift();
+    if (!spec) { deckComplete(); return; }
+    page++;
+    spec.src = spec.src || resolve(draw.source());
+    spec.note = spec.note || draw.note();
+    const { html, items, dark } = compose(spec, page);
+    const wrap = document.createElement("div");
+    wrap.className = "sw enter";
+    wrap.innerHTML = `<div class="slide${dark ? " dark" : ""}">${html}</div>`;
+    const el = wrap.firstChild;
+    el.querySelectorAll("[data-rv]").forEach((n) => { const it = items[+n.dataset.rv]; it.el = n; });
+    for (const it of items) { it.cost = it.kind === "t" ? Math.max(1, it.full.length) : 3; it.done = 0; }
+    stage.querySelectorAll(".sw").forEach((w) => w.remove());
+    stage.appendChild(wrap);
+    cur = { spec, page, el, wrap, items, idx: 0, finished: false };
+    markTyping();
+    renderThumbs();
+    log(`p.${page}: ${view(spec.note)}`, "note");
+  }
+
+  function paint(it) {
+    if (it.kind === "s") { it.el.style.setProperty("--p", (it.done / it.cost).toFixed(3)); return; }
+    const disp = view(it.full);
+    // 横文字モードでは表示文字数が変わるので、進捗は元の文字数に対する割合で持ち、表示側で換算する
+    it.el.textContent = it.done >= it.cost ? disp : disp.slice(0, Math.floor((it.done / it.cost) * disp.length));
+  }
+  function markTyping() {
+    cur.el.querySelectorAll(".typing").forEach((n) => n.classList.remove("typing"));
+    const it = cur.items[cur.idx];
+    if (it && it.kind === "t") it.el.classList.add("typing");
+  }
+  // 戻り値: 進めた文字数（図形は 0 として数える。称賛メールのペースを文字量に合わせるため）
+  function advance(units) {
+    let chars = 0;
+    while (units > 0 && cur.idx < cur.items.length) {
+      const it = cur.items[cur.idx];
+      const take = Math.min(units, it.cost - it.done);
+      it.done += take;
+      units -= take;
+      if (it.kind === "t") chars += take;
+      paint(it);
+      lastEl = it.el;
+      if (it.done >= it.cost) cur.idx++;
+    }
+    markTyping();
+    if (cur.idx >= cur.items.length) slideDone();
+    return chars;
+  }
+
+  function slideDone() {
+    if (cur.finished) return;
+    cur.finished = true;
+    slidesMade++;
+    if (FW_TYPES.has(cur.spec.t)) frameworks++;
+    const title = cur.spec.head || cur.spec.title || cur.spec.big || "Appendix";
+    log(`✓ p.${cur.page} 完成「${view(title).slice(0, 28)}${title.length > 28 ? "…" : ""}」`, "ok");
+    blip(1568, 0.12, "sine");
+    done.push(cur.el);
+    // 最後の 1 枚は残し、その上に「受注」のハンコを押す
+    if (queue.length) cur.wrap.classList.add("leave");
+    setTimeout(() => (queue.length ? nextSlide() : deckComplete()), 380);
+  }
+
+  function renderThumbs() {
+    const box = $("#thumbs");
+    // 完成済みのサムネイルは作り直さず、新しく完成した分だけ足す（毎回 clone すると重いため）
+    box.querySelector(".thumb.now")?.remove();
+    while (box.childElementCount < done.length) {
+      const el = done[box.childElementCount];
+      const t = document.createElement("div");
+      t.className = "thumb born";
+      t.innerHTML = `<span>${box.childElementCount + 1}</span><div class="tw"></div>`;
+      const c = el.cloneNode(true);
+      c.querySelectorAll(".typing").forEach((n) => n.classList.remove("typing"));
+      t.querySelector(".tw").appendChild(c);
+      box.appendChild(t);
+    }
+    const now = document.createElement("div");
+    now.className = "thumb now";
+    now.innerHTML = `<span>${page}</span><div class="tw">編集中…</div>`;
+    box.appendChild(now);
+    now.scrollIntoView({ block: "nearest" });
+    fitThumbs();
+    const total = page + queue.length;
+    $("#slideCount").textContent = `${page} / ${total}`;
+    $("#deckProg").style.width = ((page - 1) / total) * 100 + "%";
+    $("#fname").textContent = fileName();
+  }
+  function fitThumbs() {
+    const tw = $("#thumbs .tw");
+    if (tw && tw.clientWidth) $("#thumbs").style.setProperty("--ts", tw.clientWidth / 960);
+  }
+
+  function deckComplete() {
+    if (switching) return;
+    switching = true;
+    decksWon++;
+    const amount = rint(8, 48) * 1e7;
+    revenue += amount;
+    $("#deckProg").style.width = "100%";
+    log(`★ 提案採択: ${deckDef.title} → 次フェーズ「${deckDef.next}」受注`, "ok");
+    const h = document.createElement("div");
+    h.className = "hanko";
+    h.textContent = "受注";
+    stage.appendChild(h);
+    thump();
+    banner("提案採択", `次フェーズ「${deckDef.next}」を受注 · ¥${(amount / 1e8).toFixed(1)} 億`, "won");
+    flash(COLORS[2]);
+    confetti();
+    fanfare();
+    setTimeout(() => mail(...draw.complete()), 900);
+    // 皮肉の着地点。毎回だと慣れてしまうので、たまに外す
+    if (Math.random() < 0.85) setTimeout(() => mail(...draw.aftermath()), 2600);
+    if (decksWon === 3) setTimeout(() => mail(...LINES.streak[3]), 4200);
+    if (decksWon === DECKS.length) {
+      setTimeout(() => mail(...LINES.streak.all), 4200);
+      setTimeout(() => mail(...LINES.streak.allSe), 5600);
+    }
+    switchTimer = setTimeout(() => {
+      log("", "");
+      loadDeck(DECKS[(DECKS.indexOf(deckDef) + 1) % DECKS.length]);
+    }, 4600);
+  }
+
+  // ---------------------------------------------------------------- stage scaling
+  function fitStage() {
+    const w = stage.clientWidth, h = stage.clientHeight;
+    if (w && h) stage.style.setProperty("--s", Math.min(w / 960, h / 540) * 0.92);
+    fitThumbs();
+    fitShow();
+  }
+  new ResizeObserver(fitStage).observe(stage);
+
+  // ---------------------------------------------------------------- notes log
+  const nout = $("#nout");
+  function log(text, cls = "") {
+    const el = document.createElement("div");
+    el.className = "nl " + cls;
+    el.textContent = text || " ";
+    nout.appendChild(el);
+    while (nout.childElementCount > 60) nout.firstChild.remove();
+  }
+  const cmd = (t) => log(t, "cmd");
+
+  // ---------------------------------------------------------------- HUD: banner, flash, mail
+  const bannerEl = $("#banner");
+  function banner(title, sub, kind = "") {
+    $("#bTitle").textContent = title;
+    $("#bSub").textContent = view(sub);
+    bannerEl.className = "banner " + kind;
+    void bannerEl.offsetWidth; // アニメーションを確実に最初から再生し直すためのリフロー
+    bannerEl.classList.add("show");
+  }
+  function flash(color) {
+    const f = $("#flash");
+    f.style.background = color;
+    f.classList.remove("go");
+    void f.offsetWidth;
+    f.classList.add("go");
+  }
+
+  // 差出人アドレスは予約済みの .example ドメインだけを使い、実在の組織に届きうる形にしない
+  const CLIENT_SIDE = new Set(["クライアント部長", "クライアント役員", "クライアント新人", "秘書", "現場 SE", "情シス", "定年間近の担当者"]);
+  const LOCAL = { "クライアント部長": "bucho", "クライアント役員": "yakuin", "クライアント新人": "shinjin", "秘書": "hisho", "現場 SE": "genba-se",
+    "情シス": "joushis", "定年間近の担当者": "legacy", "パートナー": "partner", "マネージャー": "manager", "新卒アナリスト": "analyst", "経理": "keiri",
+    "営業": "sales", "競合コンサル": "info", "出版社": "editor", "生成 AI": "noreply", "未来の自分": "me" };
+  const DOMAIN = { "競合コンサル": "rival-consulting.example", "出版社": "publisher.example", "生成 AI": "genai.example", "未来の自分": "future.example" };
+  const address = (who) => `${LOCAL[who] || "info"}@${DOMAIN[who] || (CLIENT_SIDE.has(who) ? "client.example" : "iamconsul.example")}`;
+  // メールの往復が続くほど RE: が積み上がる。長くなりすぎたら Outlook 風に RE[n]: へ畳む
+  function subjectLine() {
+    const depth = rint(0, Math.min(9, 2 + Math.floor(mailCount / 5)));
+    const pre = depth > 3 ? `RE[${depth}]: ` : "RE: ".repeat(depth);
+    return pre + (Math.random() < 0.15 ? "FW: " : "") + resolve(draw.subject());
+  }
+
+  const mailsEl = $("#mails");
+  let mailCount = 0;
+  function mail(from, text, { urgent = false, subject = "" } = {}) {
+    mailCount++;
+    $("#inbox").textContent = mailCount;
+    const el = document.createElement("div");
+    el.className = "mail" + (urgent ? " urgent" : "");
+    const now = new Date();
+    el.innerHTML = `<div class="m-top"><b>✉ ${urgent ? "重要度: 高" : "新着メール"}</b><span>${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}</span></div>
+      <div class="m-from"><b>${esc(from)}</b><span>&lt;${esc(address(from))}&gt;</span></div>
+      <div class="m-subj">${urgent ? '<span class="m-flag">!</span>' : ""}${esc(view(subject || subjectLine()))}</div>
+      <div class="m-cc">CC: ${esc(resolve(draw.cc()))}</div>
+      <div class="m-body">${esc(view(text))}</div>`;
+    mailsEl.appendChild(el);
+    while (mailsEl.childElementCount > 3) mailsEl.firstChild.remove();
+    setTimeout(() => { el.classList.add("out"); setTimeout(() => el.remove(), 400); }, urgent ? 10000 : 7000);
+    blip(988, 0.08, "sine");
+    setTimeout(() => blip(1319, 0.12, "sine"), 110);
+  }
+
+  // ---------------------------------------------------------------- sound (opt-in: ブラウザは操作前の音声再生を許可しない)
+  let audio = null, soundOn = false, noiseBuf = null, bus = null;
+  function ensureNoise() {
+    if (noiseBuf) return;
+    noiseBuf = audio.createBuffer(1, Math.floor(audio.sampleRate * 0.4), audio.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    // 高速連打で音が重なっても割れないよう、全打鍵音をコンプレッサーに通す
+    bus = audio.createDynamicsCompressor();
+    bus.connect(audio.destination);
+  }
+  function blip(freq, dur = 0.03, type = "triangle", vol = 0.04) {
+    if (!soundOn || !audio) return;
+    const t = audio.currentTime;
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = type;
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(audio.destination);
+    o.start(t);
+    o.stop(t + dur + 0.02);
+  }
+  // ノイズをフィルタで削って音を合成する。音源ファイルを持たずに単体 HTML のまま配れるようにするため
+  function noise(t, { freq = 3000, q = 1.2, type = "bandpass", vol = 0.5, dur = 0.03 } = {}) {
+    const src = audio.createBufferSource();
+    src.buffer = noiseBuf;
+    src.playbackRate.value = rnd(0.85, 1.15);
+    const f = audio.createBiquadFilter();
+    f.type = type;
+    f.frequency.value = freq;
+    f.Q.value = q;
+    const g = audio.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    src.connect(f).connect(g).connect(bus);
+    src.start(t, rnd(0, 0.2), dur + 0.02);
+  }
+  // ノート PC の浅いキーボードを想定し、メカニカルより軽い「パチ」に寄せる
+  function clack(heavy = false) {
+    if (!soundOn || !audio) return;
+    ensureNoise();
+    const t = audio.currentTime;
+    noise(t, { freq: rnd(3200, 4600), vol: heavy ? 0.5 : 0.36, dur: 0.022 });
+    noise(t + 0.006, { type: "lowpass", freq: heavy ? 700 : 1100, q: 0.7, vol: heavy ? 0.6 : 0.3, dur: heavy ? 0.06 : 0.035 });
+  }
+  // 拍手: 帯域の違う短いノイズを不規則に重ねると、人数がいるように聞こえる
+  function applause() {
+    if (!soundOn || !audio) return;
+    ensureNoise();
+    const t = audio.currentTime;
+    for (let i = 0; i < 90; i++) {
+      const at = t + rnd(0, 1.8) * Math.sqrt(Math.random());
+      noise(at, { freq: rnd(1200, 3200), q: 0.9, vol: rnd(0.15, 0.4) * (1 - (at - t) / 2.2), dur: 0.02 });
+    }
+  }
+  function thump() {
+    if (!soundOn || !audio) return;
+    ensureNoise();
+    const t = audio.currentTime, o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.setValueAtTime(150, t);
+    o.frequency.exponentialRampToValueAtTime(45, t + 0.18);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.9, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+    o.connect(g).connect(bus);
+    o.start(t);
+    o.stop(t + 0.3);
+    noise(t, { type: "lowpass", freq: 600, vol: 0.8, dur: 0.08 });
+  }
+  const fanfare = () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => blip(f, 0.25, "square", 0.03), i * 90));
+  function toggleSound() {
+    soundOn = !soundOn;
+    if (soundOn && !audio) {
+      try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch { soundOn = false; }
+    }
+    $("#soundBtn").lastChild.textContent = soundOn ? "サウンド ON" : "サウンド OFF";
+    if (soundOn) clack(true);
+  }
+
+  // ---------------------------------------------------------------- particles
+  const fx = $("#fx"), fctx = fx.getContext("2d");
+  const css = getComputedStyle(document.documentElement);
+  const COLORS = ["--navy2", "--teal", "--gold", "--sky", "--red"].map((v) => css.getPropertyValue(v).trim());
+  const parts = [];
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    fx.width = innerWidth * dpr;
+    fx.height = innerHeight * dpr;
+    fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  addEventListener("resize", resize);
+  resize();
+  let lastEl = null;
+  function point() {
+    if (!lastEl || !lastEl.isConnected) return null;
+    const r = lastEl.getBoundingClientRect();
+    return lastEl.classList.contains("tx") ? { x: r.right, y: r.top + r.height / 2 } : { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+  function burst(pt, n, power = 1) {
+    if (!pt || reduceMotion) return;
+    for (let i = 0; i < n && parts.length < 700; i++) {
+      parts.push({ x: pt.x, y: pt.y, vx: rnd(-3, 3) * power, vy: rnd(-5, -0.5) * power, life: 1, c: pick(COLORS), s: rnd(1.5, 4) });
+    }
+  }
+  function confetti() {
+    if (reduceMotion) return;
+    for (let i = 0; i < 260; i++) {
+      parts.push({ x: rnd(0, innerWidth), y: rnd(-80, -10), vx: rnd(-1.5, 1.5), vy: rnd(1, 5), life: 1.8, c: pick(COLORS), s: rnd(3, 7) });
+    }
+  }
+  function drawParticles() {
+    fctx.clearRect(0, 0, innerWidth, innerHeight);
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i];
+      p.vy += 0.18;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= 0.022;
+      if (p.life <= 0 || p.y > innerHeight + 20) { parts.splice(i, 1); continue; }
+      fctx.globalAlpha = Math.min(1, p.life);
+      fctx.fillStyle = p.c;
+      fctx.fillRect(p.x, p.y, p.s, p.s * 0.6);
+    }
+    fctx.globalAlpha = 1;
+  }
+
+  // ---------------------------------------------------------------- game state
+  let started = false, startedAt = 0;
+  let combo = 0, maxCombo = 0, lastHit = 0, tierIdx = -1;
+  let chars = 0, hours = 0, bill = 0;
+  let nextPraiseAt = 160, nextMissionAt = Infinity;
+  const hitTimes = [];
+
+  const TIERS = [
+    { at: 10, name: "WARMING UP" },
+    { at: 30, name: "BILLABLE" },
+    { at: 60, name: "SYNERGY", banner: ["SYNERGY", "1 + 1 が 3 になった。根拠は Appendix に"] },
+    { at: 120, name: "PARADIGM SHIFT", banner: ["PARADIGM SHIFT", "パラダイムがシフトした。どこへかは次フェーズで"] },
+    { at: 250, name: "PARTNER", banner: ["PARTNER", "単価が 3 倍になった。中身は変わっていない"] },
+    { at: 500, name: "THOUGHT LEADER", banner: ["THOUGHT LEADER", "あなたの口癖が、来年のバズワードになる"] },
+  ];
+  // [必要な請求稼働 h, 肩書き, 一言, 時間単価（円）]
+  const RANKS = [
+    [0, "アナリスト", "議事録と図形の整列担当", 15000],
+    [4, "コンサルタント", "クライアントの前で頷ける", 25000],
+    [12, "シニアコンサルタント", "1 人で論点を出せる", 40000],
+    [30, "マネージャー", "レビューで『シュッと』と言える", 60000],
+    [60, "シニアマネージャー", "会食が業務に含まれる", 80000],
+    [120, "パートナー", "名刺の肩書きが 2 行", 120000],
+    [250, "マネージングパートナー", "本を出した", 180000],
+    [500, "ソートリーダー", "投稿がすべてバズる", 300000],
+  ];
+  const rank = () => RANKS.filter(([at]) => hours >= at).pop();
+
+  // セッション中に 1 回だけ出す反応（時間帯・コンボ段階・デッキ固有のセリフ）
+  const shownOnce = new Set();
+  function once(key, fn) { if (shownOnce.has(key)) return; shownOnce.add(key); fn(); }
+  function nextPraise() {
+    const h = new Date().getHours(), slot = LINES.time.find(([from, to]) => h >= from && h < to);
+    if (slot && !shownOnce.has(`time:${slot[0]}`)) { shownOnce.add(`time:${slot[0]}`); return [slot[2], slot[3]]; }
+    const own = (LINES.theme[deckDef.id] || []).filter(([, text]) => !shownOnce.has(`theme:${text}`));
+    if (own.length && Math.random() < 0.3) { const line = pick(own); shownOnce.add(`theme:${line[1]}`); return line; }
+    return Math.random() < 0.1 ? draw.ai() : draw.praise();
+  }
+
+  // ---------------------------------------------------------------- core interaction
+  function hit(key = "") {
+    if (!started) { start(); return; }
+    if (!$("#show").hidden) { endShow(); return; }
+    const now = performance.now();
+    combo = now - lastHit < 700 ? combo + 1 : 1;
+    lastHit = now;
+    maxCombo = Math.max(maxCombo, combo);
+    hitTimes.push(now);
+    // Enter とスペースは実物のキーボードでも大きいキーなので、重く低い音にする
+    clack(key === "Enter" || key === " ");
+    updateCombo();
+
+    // コンボが伸びるほど 1 打鍵あたりの文字数が増え、「指が追いつかない速さ」を演出する
+    const k = Math.min(3 + Math.floor(combo / 10), 18);
+    // 1 打鍵 = 3 分の稼働として計上する。速く叩くほど 1 打鍵の「作業量」が増えるので、請求も増える
+    const dh = 0.05 * (k / 3);
+    hours += dh;
+    bill += dh * rank()[3];
+
+    if (switching || !cur || cur.finished) { burst(point(), 4); return; }
+    chars += advance(k);
+    burst(point(), Math.min(3 + combo / 8, 22), 1 + Math.min(combo / 150, 1));
+    shake();
+    if (chars >= nextPraiseAt) {
+      nextPraiseAt = chars + rint(420, 720);
+      mail(...nextPraise());
+    }
+    if (mission) {
+      mission.progress += 2.6 + Math.min(combo, 150) * 0.025;
+      if (mission.progress >= 100) finishMission(true);
+    }
+  }
+
+  function shake() {
+    if (reduceMotion || combo < 30 || !cur) return;
+    const amp = Math.min(1 + combo / 60, 4);
+    cur.el.style.translate = `${rnd(-amp, amp)}px ${rnd(-amp, amp)}px`;
+    clearTimeout(shake.t);
+    shake.t = setTimeout(() => cur && (cur.el.style.translate = ""), 60);
+  }
+
+  const comboEl = $("#combo"), comboNum = $("#comboNum"), comboTier = $("#comboTier");
+  function updateCombo() {
+    comboEl.classList.toggle("show", combo >= 5);
+    comboNum.textContent = "×" + combo;
+    comboNum.classList.remove("pop");
+    void comboNum.offsetWidth;
+    comboNum.classList.add("pop");
+    let idx = -1;
+    TIERS.forEach((t, i) => { if (combo >= t.at) idx = i; });
+    comboTier.textContent = idx >= 0 ? TIERS[idx].name : "COMBO";
+    if (idx > tierIdx && idx >= 0) {
+      const t = TIERS[idx];
+      log(`[zone] ${t.name} に到達（コンボ ×${t.at}）`, "hi");
+      if (t.banner && !switching) {
+        banner(t.banner[0], t.banner[1], "flow");
+        flash(COLORS[2]);
+        fanfare();
+      }
+      const rs = LINES.tier[t.name];
+      if (rs && !switching) once(`tier:${t.name}`, () => rs.forEach((r, k) => setTimeout(() => mail(...r), 1200 + k * 1600)));
+    }
+    tierIdx = idx;
+    document.body.classList.toggle("flow", combo >= 60);
+    document.body.classList.toggle("legend", combo >= 250);
+  }
+
+  function resetCombo() {
+    if (combo === 0) return;
+    if (combo >= 30) log(`[zone] コンボ ×${combo} 終了 — 小休止。次の会議まであと 2 分`, "dim");
+    combo = 0;
+    tierIdx = -1;
+    comboEl.classList.remove("show");
+    document.body.classList.remove("flow", "legend");
+  }
+
+  // ---------------------------------------------------------------- commands
+  let busy = null;
+  async function job(name, fn) {
+    if (busy) { log(`${busy} の途中です。終わってからもう一度どうぞ`, "warn"); return; }
+    if (switching || !cur) return;
+    busy = name;
+    const btn = document.querySelector(`[data-cmd="${name}"]`);
+    btn && btn.setAttribute("aria-busy", "true");
+    try { await fn(); } finally {
+      busy = null;
+      btn && btn.removeAttribute("aria-busy");
+    }
+  }
+  const PEN = ["シュッと", "So What?", "MECE?", "主語は？", "もっと刺さる言葉で", "この矢印の意味は？", "1 枚で言うと？", "てにをは",
+    "数字の根拠", "色が多い", "一言で", "フォント揃ってない", "ここ逆では？", "もう少し抽象度を上げて", "具体的に"];
+
+  const review = () => job("review", async () => {
+    cmd("パートナーレビューを依頼");
+    const el = cur.el, pen = document.createElement("div");
+    pen.className = "pen";
+    const n = rint(5, 8);
+    pen.innerHTML = Array.from({ length: n }, (_, i) => {
+      const x = rnd(60, 760), y = rnd(80, 430), w = rnd(90, 220), d = (i * 0.22).toFixed(2);
+      return `<div class="pen-o" style="left:${x}px;top:${y}px;width:${w}px;height:${w * rnd(0.35, 0.55)}px;animation-delay:${d}s"></div>
+        <div class="pen-c" style="left:${x + w * 0.6}px;top:${y - 26}px;rotate:${rnd(-8, 6)}deg;animation-delay:${d}s">${esc(pick(PEN))}</div>`;
+    }).join("");
+    el.appendChild(pen);
+    for (let i = 0; i < n; i++) { blip(rnd(300, 420), 0.05, "sawtooth", 0.02); await sleep(220); }
+    log(`  赤入れ ${n} 件を受領`, "err");
+    await sleep(900);
+    log("  反映中… 反映中… 反映中…", "dim");
+    pen.classList.add("out");
+    await sleep(500);
+    pen.remove();
+    version++;
+    $("#fname").textContent = fileName();
+    log(`  全件反映の結果、初版とまったく同じ内容に戻りました（v${version}）`, "ok");
+    banner("REVIEW CLEARED", `赤入れ ${n} 件 → 全件反映 → なぜか初版に戻った`, "ok");
+    flash(COLORS[1]);
+    fanfare();
+    setTimeout(() => mail("パートナー", pick(["うん、だいぶシュッとした", "いいね。最初の案が一番良かった", "これで行こう。ところで何が変わった？"]), { subject: `RE: v${version} 確認しました` }), 900);
+  });
+
+  const align = () => job("align", async () => {
+    cmd("オブジェクトの整列（左揃え → 上下中央揃え → 左右に整列 → 左揃え）");
+    const el = cur.el;
+    const targets = [...el.querySelectorAll(".sh, .s-head")];
+    el.classList.remove("snap");
+    targets.forEach((t) => { t.style.translate = `${rnd(-26, 26)}px ${rnd(-16, 16)}px`; t.style.rotate = `${rnd(-5, 5)}deg`; });
+    const g = document.createElement("div");
+    g.className = "guides";
+    g.innerHTML = [44, 480, 916].map((x) => `<i style="left:${x}px;top:0;bottom:0;width:1px"></i>`).join("") + [98, 300].map((y) => `<i style="top:${y}px;left:0;right:0;height:1px"></i>`).join("");
+    el.appendChild(g);
+    await sleep(520);
+    el.classList.add("snap");
+    targets.forEach((t) => { t.style.translate = ""; t.style.rotate = ""; });
+    clack(true);
+    await sleep(600);
+    g.classList.add("out");
+    setTimeout(() => { g.remove(); el.classList.remove("snap"); }, 500);
+    const n = targets.length * rint(6, 12);
+    log(`  オブジェクト ${n} 個を 0.1pt 単位で整列。フォントを全ページ統一`, "ok");
+    banner("ALIGNED", `オブジェクト ${n} 個がピタッと揃った。中身は変わっていない`, "ok");
+    flash(COLORS[1]);
+    fanfare();
+    if (Math.random() < 0.5) setTimeout(() => mail("新卒アナリスト", "今夜の徹夜、なくなりました…！", { subject: "RE: 体裁修正の件" }), 900);
+  });
+
+  function frameworkInsert() {
+    if (switching || !cur) return;
+    const s = frameworkSlide();
+    queue.unshift(s);
+    renderThumbs();
+    log(`[fw] 2×2 マトリクス「${s.y[0].replace(/：低$/, "")} × ${s.x[0].replace(/：低$/, "")}」を p.${page + 1} に割り込み`, "hi");
+    banner("FRAMEWORK INSERTED", "迷ったら 2×2。次のスライドに割り込ませた", "flow");
+    flash(COLORS[2]);
+    fanfare();
+    setTimeout(() => mail("マネージャー", pick(["いいね、2×2 は全てを解決する", "右上に貴社がいる。完璧だ", "軸の意味はあとで考えよう"]), { subject: "RE: マトリクス追加の件" }), 900);
+  }
+
+  // ---------------------------------------------------------------- slideshow (F3)
+  const showEl = $("#show"), showSw = $("#showSw");
+  let showTimer = 0;
+  function fitShow() {
+    if (showEl.hidden) return;
+    showSw.style.setProperty("--s", Math.min(innerWidth / 960, innerHeight / 540) * 0.94);
+  }
+  const present = () => job("present", async () => {
+    const slides = [...done.slice(-12), cur.el];
+    cmd(`スライドショー開始（${slides.length} 枚 · 役員 ${rint(6, 14)} 名ご出席）`);
+    showEl.hidden = false;
+    fitShow();
+    let i = 0;
+    await new Promise((res) => {
+      const step = () => {
+        if (i >= slides.length) { res(); return; }
+        const c = slides[i].cloneNode(true);
+        c.querySelectorAll(".typing, .pen, .guides").forEach((n) => (n.classList.contains("typing") ? n.classList.remove("typing") : n.remove()));
+        c.classList.add("in");
+        c.style.translate = "";
+        showSw.replaceChildren(c);
+        $("#showCap").textContent = `${i + 1} / ${slides.length} · 任意のキーで終了`;
+        clack(true);
+        i++;
+        showTimer = setTimeout(step, 1100);
+      };
+      endShow.res = () => { clearTimeout(showTimer); res(); };
+      step();
+    });
+    showEl.hidden = true;
+    showSw.replaceChildren();
+    applause();
+    log(`  質疑 0 件。拍手 ${rint(30, 90)} 秒`, "ok");
+    banner("PRESENTATION SUCCESS", "役員全員が深く頷いた", "won");
+    flash(COLORS[2]);
+    confetti();
+    setTimeout(() => mail(...draw.present()), 900);
+    focusSink();
+  });
+  function endShow() { endShow.res && endShow.res(); endShow.res = null; }
+  showEl.addEventListener("pointerdown", (e) => { e.preventDefault(); endShow(); });
+
+  function toggleYoko() {
+    yoko = !yoko;
+    $("#yokoBtn").setAttribute("aria-pressed", String(yoko));
+    $("#yokoBtn").lastChild.textContent = yoko ? "横文字モード ON" : "横文字モード";
+    if (cur) cur.items.forEach((it) => it.kind === "t" && it.done && paint(it));
+    log(yoko ? "[i18n] 全テキストをグローバル・スタンダードにアラインしました" : "[i18n] 日本語に戻しました（一部、戻らない語があります）", "hi");
+    if (yoko) {
+      banner("YOKOMOJI MODE", "全テキストをグローバル・スタンダードにアラインした", "flow");
+      flash(COLORS[3]);
+    }
+  }
+
+  // ---------------------------------------------------------------- missions
+  let mission = null;
+  const missionEl = $("#mission");
+  function startMission() {
+    if (mission || switching || !cur) return;
+    const m = draw.mission();
+    mission = { m, progress: 0, end: performance.now() + 20000 };
+    $("#mTitle").textContent = view(m.title);
+    missionEl.hidden = false;
+    mail(m.from, m.msg, { urgent: true, subject: `【至急】${m.title}` });
+    log(`!! 至急: ${m.title}`, "err");
+    flash(COLORS[4]);
+  }
+  function finishMission(ok) {
+    if (!mission) return;
+    const { m } = mission;
+    mission = null;
+    missionEl.hidden = true;
+    nextMissionAt = performance.now() + rnd(50000, 80000);
+    if (ok) {
+      log(`✓ 対応完了: ${m.title} — ${m.done}`, "ok");
+      banner("MISSION COMPLETE", m.done, "ok");
+      flash(COLORS[1]);
+      confetti();
+      fanfare();
+      setTimeout(() => mail(m.from, draw.thanks(), { subject: `RE: 【至急】${m.title}` }), 1000);
+    } else {
+      log(`… 時間切れ: ${m.title}`, "warn");
+      banner("TIME UP", "…と思ったら、先方の会議がリスケになっていた", "warn");
+      setTimeout(() => mail(m.from, draw.timeout(), { subject: `RE: 【至急】${m.title}` }), 1200);
+    }
+  }
+
+  // ---------------------------------------------------------------- command routing
+  const COMMANDS = { review, align, present, framework: frameworkInsert, mission: startMission, sound: toggleSound, yoko: toggleYoko };
+  const FKEYS = { F1: "review", F2: "align", F3: "present", F4: "framework", F5: "mission", F6: "sound", F7: "yoko" };
+  const ALTKEYS = { Digit1: "review", Digit2: "align", Digit3: "present", Digit4: "framework", Digit5: "mission", Digit6: "sound", Digit7: "yoko" };
+  function run(name) {
+    if (!showEl.hidden) { endShow(); return; }
+    if (!started) start();
+    COMMANDS[name]();
+  }
+
+  // ---------------------------------------------------------------- intro / deck picker
+  const picker = $("#picker");
+  let pickIdx = 0;
+  picker.innerHTML = DECKS.map((d, i) => `<button type="button" data-i="${i}" aria-pressed="false"><b>${esc(d.theme)}</b><span>${esc(d.title)}</span></button>`).join("");
+  function preview(i) {
+    pickIdx = (i + DECKS.length) % DECKS.length;
+    picker.querySelectorAll("button").forEach((b, j) => b.setAttribute("aria-pressed", String(j === pickIdx)));
+    loadDeck(DECKS[pickIdx], { quiet: true });
+    // 開始前から「作業中のパワポ」に見えるよう、表紙を途中まで作った状態にしておく
+    advance(40);
+  }
+  picker.addEventListener("pointerdown", (e) => e.stopPropagation());
+  picker.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-i]");
+    if (!b) return;
+    if (+b.dataset.i !== pickIdx) preview(+b.dataset.i);
+    start();
+  });
+
+  $("#deckSel").innerHTML = DECKS.map((d) => `<option value="${esc(d.id)}">${esc(d.theme)} · ${esc(d.title)}</option>`).join("");
+  $("#deckSel").addEventListener("change", (e) => {
+    const d = DECKS.find((x) => x.id === e.target.value);
+    if (!started) preview(DECKS.indexOf(d));
+    else loadDeck(d);
+    focusSink();
+  });
+
+  // ---------------------------------------------------------------- input wiring
+  const sink = $("#sink");
+  const focusSink = () => { try { sink.focus({ preventScroll: true }); } catch { /* フォーカス不可な環境でも表示は動かす */ } };
+
+  addEventListener("keydown", (e) => {
+    // ブラウザ標準のショートカット（再読み込み・タブ切替など）は奪わない
+    if (e.metaKey || e.ctrlKey) return;
+    if (e.target === $("#deckSel")) return;
+    const name = FKEYS[e.key] || (e.altKey && ALTKEYS[e.code]);
+    if (name) { e.preventDefault(); run(name); return; }
+    if (!showEl.hidden) { e.preventDefault(); endShow(); return; }
+    if (!started && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
+      e.preventDefault();
+      preview(pickIdx + (e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 1));
+      return;
+    }
+    // IME 変換中やモバイルの仮想キーボードは keydown が当てにならないので input イベント側で拾う
+    if (e.isComposing || e.keyCode === 229 || e.key === "Unidentified" || e.key === "Process") return;
+    if (["Shift", "Alt", "Control", "Meta", "CapsLock", "Fn", "Escape", "Tab"].includes(e.key)) return;
+    e.preventDefault();
+    hit(e.key);
+  });
+  sink.addEventListener("input", (e) => {
+    hit();
+    if (!e.isComposing) sink.value = "";
+  });
+  sink.addEventListener("compositionend", () => { sink.value = ""; });
+
+  stage.addEventListener("pointerdown", () => { hit(); focusSink(); });
+  document.querySelector(".bar").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-cmd]");
+    if (b) { run(b.dataset.cmd); focusSink(); }
+  });
+  $("#intro").addEventListener("pointerdown", (e) => { e.preventDefault(); start(); });
+
+  function start() {
+    if (started) return;
+    started = true;
+    startedAt = performance.now();
+    $("#intro").hidden = true;
+    focusSink();
+    nextMissionAt = performance.now() + 45000;
+    // プレビュー中に作った分は自分の成果ではないので数えない
+    slidesMade = 0;
+    frameworks = 0;
+    nout.textContent = "";
+    cmd(`新規プレゼンテーション: ${deckDef.title}（${ctx.client} 御中）`);
+    log("[app] 集中モード ON。Teams のステータスを『会議中』に固定しました", "hi");
+  }
+
+  // ---------------------------------------------------------------- report loop
+  const room = $("#room");
+  // 12 人中 1〜2 人は必ず寝ている。会議室のリアリティのため
+  const sleepers = new Set([rint(0, 11), rint(0, 11)]);
+  for (let i = 0; i < 12; i++) {
+    const h = document.createElement("i");
+    h.style.setProperty("--d", (Math.random() * 0.5).toFixed(2) + "s");
+    if (sleepers.has(i)) { h.className = "zzz"; h.innerHTML = "<span>z</span>"; }
+    room.appendChild(h);
+  }
+  const spark = $("#spark"), sctx = spark.getContext("2d");
+  const history = new Array(60).fill(0);
+  const yen = (n) => n >= 1e8 ? `¥${(n / 1e8).toFixed(2)}億` : n >= 1e4 ? `¥${fmt(n / 1e4)}万` : `¥${fmt(n)}`;
+
+  function drawSpark() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = spark.clientWidth, h = spark.clientHeight;
+    if (!w) return;
+    if (spark.width !== w * dpr) { spark.width = w * dpr; spark.height = h * dpr; }
+    sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    sctx.clearRect(0, 0, w, h);
+    const max = Math.max(1e6, ...history);
+    sctx.strokeStyle = css.getPropertyValue("--line");
+    sctx.lineWidth = 1;
+    for (let g = 1; g < 3; g++) { sctx.beginPath(); sctx.moveTo(0, (h * g) / 3); sctx.lineTo(w, (h * g) / 3); sctx.stroke(); }
+    const pts = history.map((v, i) => [(i / (history.length - 1)) * w, h - 2 - (v / max) * (h - 6)]);
+    sctx.beginPath();
+    pts.forEach(([x, y], i) => (i ? sctx.lineTo(x, y) : sctx.moveTo(x, y)));
+    sctx.lineTo(w, h); sctx.lineTo(0, h); sctx.closePath();
+    sctx.fillStyle = "rgba(200, 150, 42, .16)";
+    sctx.fill();
+    sctx.beginPath();
+    pts.forEach(([x, y], i) => (i ? sctx.lineTo(x, y) : sctx.moveTo(x, y)));
+    sctx.strokeStyle = COLORS[2];
+    sctx.lineWidth = 1.5;
+    sctx.stroke();
+    const [ex, ey] = pts[pts.length - 1];
+    sctx.fillStyle = COLORS[4];
+    sctx.beginPath(); sctx.arc(ex - 2, ey, 3, 0, Math.PI * 2); sctx.fill();
+  }
+
+  // 横文字率: 現在のスライドに表示中の文字のうち、カタカナと英字が占める割合
+  function yokoRate() {
+    if (!cur) return 0;
+    let all = 0, kata = 0;
+    for (const it of cur.items) {
+      if (it.kind !== "t" || !it.done) continue;
+      const s = it.el.textContent.replace(/[\s\p{P}\p{S}\d]/gu, "");
+      all += s.length;
+      kata += (s.match(/[゠-ヿA-Za-z]/g) || []).length;
+    }
+    return all ? Math.round((kata / all) * 100) : 0;
+  }
+
+  let lastSlow = 0, lastSample = 0;
+  function frame(now) {
+    drawParticles();
+    if (combo && now - lastHit > 1400) resetCombo();
+
+    if (mission) {
+      const left = Math.max(0, mission.end - now);
+      $("#mTime").textContent = (left / 1000).toFixed(1) + "s";
+      $("#mProg").style.width = Math.min(100, mission.progress) + "%";
+      if (left <= 0) finishMission(false);
+    } else if (started && now > nextMissionAt && now - lastHit < 4000 && !busy && !switching) {
+      startMission();
+    }
+
+    if (now - lastSlow > 120) {
+      lastSlow = now;
+      while (hitTimes.length && now - hitTimes[0] > 1000) hitTimes.shift();
+      const intensity = Math.min(hitTimes.length / 12, 1);
+      room.style.setProperty("--amp", (1 + intensity * 6).toFixed(1) + "px");
+      $("#flowMeter").style.width = Math.min(100, (combo / 120) * 100) + "%";
+      const r = rank();
+      $("#sBill").textContent = yen(bill);
+      $("#sRate").textContent = yen(r[3]) + "/h";
+      $("#sHours").textContent = hours.toFixed(1) + "h";
+      const real = started ? Math.floor((now - startedAt) / 1000) : 0;
+      $("#sReal").textContent = `実時間 ${Math.floor(real / 60)}:${String(real % 60).padStart(2, "0")}`;
+      $("#sSlides").textContent = fmt(slidesMade);
+      $("#sWon").textContent = decksWon ? `${decksWon} 件 · ${yen(revenue)}` : "0";
+      $("#sFw").textContent = fmt(frameworks);
+      $("#sYoko").textContent = yokoRate() + "%";
+      $("#sCombo").textContent = fmt(maxCombo);
+      $("#rank").innerHTML = `${esc(r[1])}<small>${esc(r[2])}</small>`;
+      $("#clock").textContent = new Date().toTimeString().slice(0, 8);
+      if (cur) $("#pos").textContent = `スライド ${cur.page} / ${cur.page + queue.length} · ${deckDef.theme} · 日本語 · 16:9 · 自動保存: オフ`;
+      if (now - lastSample > 500) { lastSample = now; history.push(bill); history.shift(); drawSpark(); }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // ---------------------------------------------------------------- boot
+  preview(Math.floor(Math.random() * DECKS.length));
+  log(`I AM CONSUL — ${DECKS.length} 件の案件テンプレートを読み込みました`, "dim");
+  cmd("共有ドライブと同期");
+  log("最新です（ファイル名に『最終』を含む版が 14 件あります）", "dim");
+  fitStage();
+  requestAnimationFrame(frame);
+})();
+</script>
